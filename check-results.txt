@@ -1,0 +1,734 @@
+Test 1: n1 1.1 invalid list request
+what we check
+Invalid status selector is rejected.
+what we sent
+GET http://localhost:18080/v1/auctions?status=INVALID
+what was the reply
+HTTP 400
+{"detail":"invalid auction status \"INVALID\"","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 2: n1 1.2 list OPEN auctions
+what we check
+List request with status=OPEN succeeds.
+what we sent
+GET http://localhost:18080/v1/auctions?status=OPEN
+what was the reply
+HTTP 200
+{"auctions":[{"auctionId":"auction-1","currentBid":1200,"highestBidder":"Steve Jobs","item":"Mac Pro M5 Laptop (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1},{"auctionId":"auction-3","currentBid":2100,"highestBidder":"Elon Musk","item":"Starlink mini (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1},{"auctionId":"auction-4","currentBid":1200,"highestBidder":"Steve Jobs","item":"Mac Pro M5 Laptop_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1},{"auctionId":"auction-6","currentBid":2100,"highestBidder":"Elon Musk","item":"Starlink mini_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1}]}
+what was the expected result
+HTTP 200
+PASS
+
+Test 3: n1 1.2 list CLOSED auctions
+what we check
+List request with status=CLOSED succeeds.
+what we sent
+GET http://localhost:18080/v1/auctions?status=CLOSED
+what was the reply
+HTTP 200
+{"auctions":[{"auctionId":"auction-2","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":1},{"auctionId":"auction-5","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":1}]}
+what was the expected result
+HTTP 200
+PASS
+
+Test 4: n1 1.3 list all auctions
+what we check
+List request without a selector succeeds.
+what we sent
+GET http://localhost:18080/v1/auctions
+what was the reply
+HTTP 200
+{"auctions":[{"auctionId":"auction-1","currentBid":1200,"highestBidder":"Steve Jobs","item":"Mac Pro M5 Laptop (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1},{"auctionId":"auction-2","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":1},{"auctionId":"auction-3","currentBid":2100,"highestBidder":"Elon Musk","item":"Starlink mini (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1},{"auctionId":"auction-4","currentBid":1200,"highestBidder":"Steve Jobs","item":"Mac Pro M5 Laptop_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1},{"auctionId":"auction-5","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":1},{"auctionId":"auction-6","currentBid":2100,"highestBidder":"Elon Musk","item":"Starlink mini_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1}]}
+what was the expected result
+HTTP 200
+PASS
+
+Test 5: n1 2.1 get auction-1
+what we check
+Existing dummy auction auction-1 is returned.
+what we sent
+GET http://localhost:18080/v1/auctions/auction-1
+what was the reply
+HTTP 200
+{"auctionId":"auction-1","currentBid":1200,"highestBidder":"Steve Jobs","item":"Mac Pro M5 Laptop (dummy from n1)","status":"OPEN","version":1}
+what was the expected result
+HTTP 200
+PASS
+
+Test 6: n1 2.1 get auction-2
+what we check
+Existing dummy auction auction-2 is returned.
+what we sent
+GET http://localhost:18080/v1/auctions/auction-2
+what was the reply
+HTTP 200
+{"auctionId":"auction-2","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip (dummy from n1)","status":"CLOSED","version":1}
+what was the expected result
+HTTP 200
+PASS
+
+Test 7: n1 2.1 get auction-3
+what we check
+Existing dummy auction auction-3 is returned.
+what we sent
+GET http://localhost:18080/v1/auctions/auction-3
+what was the reply
+HTTP 200
+{"auctionId":"auction-3","currentBid":2100,"highestBidder":"Elon Musk","item":"Starlink mini (dummy from n1)","status":"OPEN","version":1}
+what was the expected result
+HTTP 200
+PASS
+
+Test 8: n1 2.2 get missing auction
+what we check
+Unknown auction ID is reported as not found.
+what we sent
+GET http://localhost:18080/v1/auctions/does-not-exist
+what was the reply
+HTTP 404
+{"detail":"auction \"does-not-exist\" not found","status":404,"title":"Not Found"}
+what was the expected result
+HTTP 404
+PASS
+
+Test 9: n1 3.1 create new auction
+what we check
+Valid create request returns Created.
+what we sent
+POST http://localhost:18080/v1/auctions/demo-n1-25251
+Header: Content-Type: application/json
+Body: {"item":"Demo item","startingPrice":100}
+what was the reply
+HTTP 201
+{"auctionId":"demo-n1-25251","currentBid":100,"item":"Demo item (created on n1)","status":"OPEN","version":1}
+what was the expected result
+HTTP 201
+PASS
+
+Test 10: n1 3.2 duplicate auction-1
+what we check
+Creating an existing dummy ID returns Already Exists.
+what we sent
+POST http://localhost:18080/v1/auctions/auction-1
+Header: Content-Type: application/json
+Body: {"item":"Duplicate","startingPrice":100}
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-1\" already exists","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 11: n1 3.2 duplicate auction-2
+what we check
+Creating an existing dummy ID returns Already Exists.
+what we sent
+POST http://localhost:18080/v1/auctions/auction-2
+Header: Content-Type: application/json
+Body: {"item":"Duplicate","startingPrice":100}
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-2\" already exists","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 12: n1 3.2 duplicate auction-3
+what we check
+Creating an existing dummy ID returns Already Exists.
+what we sent
+POST http://localhost:18080/v1/auctions/auction-3
+Header: Content-Type: application/json
+Body: {"item":"Duplicate","startingPrice":100}
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-3\" already exists","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 13: n1 3.3 missing create fields
+what we check
+Missing item and startingPrice are invalid.
+what we sent
+POST http://localhost:18080/v1/auctions/demo-n1-25251-missing
+Header: Content-Type: application/json
+Body: {}
+what was the reply
+HTTP 400
+{"detail":"auction_id, item, and non-negative starting_price are required","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 14: n1 3.3 negative starting price
+what we check
+Negative startingPrice is invalid.
+what we sent
+POST http://localhost:18080/v1/auctions/demo-n1-25251-negative
+Header: Content-Type: application/json
+Body: {"item":"Bad","startingPrice":-1}
+what was the reply
+HTTP 400
+{"detail":"auction_id, item, and non-negative starting_price are required","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 15: n1 4.1 bid on auction-1
+what we check
+Bid uses the real auction status and current bid.
+what we sent
+PATCH http://localhost:18080/v1/auctions/auction-1
+Header: Content-Type: application/json
+Body: {"bidder":"n1-bidder","amount":1300}
+what was the reply
+HTTP 200
+{"auctionId":"auction-1","currentBid":1300,"highestBidder":"n1-bidder","item":"Mac Pro M5 Laptop (bid processed on n1)","status":"OPEN","version":2}
+what was the expected result
+HTTP 200
+PASS
+
+Test 16: n1 4.1 bid on auction-2
+what we check
+Bid uses the real auction status and current bid.
+what we sent
+PATCH http://localhost:18080/v1/auctions/auction-2
+Header: Content-Type: application/json
+Body: {"bidder":"n1-bidder","amount":999999}
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-2\" is already closed","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 17: n1 4.1 bid on auction-3
+what we check
+Bid uses the real auction status and current bid.
+what we sent
+PATCH http://localhost:18080/v1/auctions/auction-3
+Header: Content-Type: application/json
+Body: {"bidder":"n1-bidder","amount":2200}
+what was the reply
+HTTP 200
+{"auctionId":"auction-3","currentBid":2200,"highestBidder":"n1-bidder","item":"Starlink mini (bid processed on n1)","status":"OPEN","version":2}
+what was the expected result
+HTTP 200
+PASS
+
+Test 18: n1 4.2 bid on missing auction
+what we check
+Unknown auction ID returns Not Found.
+what we sent
+PATCH http://localhost:18080/v1/auctions/does-not-exist
+Header: Content-Type: application/json
+Body: {"bidder":"Alice","amount":100}
+what was the reply
+HTTP 404
+{"detail":"auction \"does-not-exist\" not found","status":404,"title":"Not Found"}
+what was the expected result
+HTTP 404
+PASS
+
+Test 19: n1 4.3 incorrect If-Match
+what we check
+Stale optimistic-concurrency version is rejected.
+what we sent
+PATCH http://localhost:18080/v1/auctions/auction-1
+Header: If-Match: "102"
+Body: {"bidder":"Alice","amount":1400}
+what was the reply
+HTTP 412
+{"detail":"auction \"auction-1\" is at version 2, not 102","status":412,"title":"Precondition Failed"}
+what was the expected result
+HTTP 412
+PASS
+
+Test 20: n1 4.4 correct If-Match
+what we check
+Current optimistic-concurrency version allows the bid.
+what we sent
+PATCH http://localhost:18080/v1/auctions/auction-1
+Header: If-Match: "2"
+Body: {"bidder":"Alice","amount":1400}
+what was the reply
+HTTP 200
+{"auctionId":"auction-1","currentBid":1400,"highestBidder":"Alice","item":"Mac Pro M5 Laptop (bid processed on n1)","status":"OPEN","version":3}
+what was the expected result
+HTTP 200
+PASS
+
+Test 21: n1 4.5 bid too low
+what we check
+Bid equal to the current bid is rejected.
+what we sent
+PATCH http://localhost:18080/v1/auctions/auction-1
+Body: {"bidder":"Bob","amount":1400}
+what was the reply
+HTTP 409
+{"detail":"bid amount 1400 is not high enough for auction \"auction-1\"","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 22: n1 4.6 negative bid
+what we check
+Negative bid amount is invalid.
+what we sent
+PATCH http://localhost:18080/v1/auctions/auction-1
+Header: Content-Type: application/json
+Body: {"bidder":"Bob","amount":-1}
+what was the reply
+HTTP 400
+{"detail":"bid amount must be positive","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 23: n1 4.7 missing bidder
+what we check
+Bidder is required.
+what we sent
+PATCH http://localhost:18080/v1/auctions/auction-1
+Header: Content-Type: application/json
+Body: {"amount":1500}
+what was the reply
+HTTP 400
+{"detail":"bidder is required","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 24: n1 5.1 delete missing auction
+what we check
+Unknown auction ID returns Not Found.
+what we sent
+DELETE http://localhost:18080/v1/auctions/does-not-exist
+what was the reply
+HTTP 404
+{"detail":"auction \"does-not-exist\" not found","status":404,"title":"Not Found"}
+what was the expected result
+HTTP 404
+PASS
+
+Test 25: n1 5.2 delete with incorrect If-Match
+what we check
+Stale version cannot close the auction.
+what we sent
+DELETE http://localhost:18080/v1/auctions/auction-1
+Header: If-Match: "103"
+what was the reply
+HTTP 412
+{"detail":"auction \"auction-1\" is at version 3, not 103","status":412,"title":"Precondition Failed"}
+what was the expected result
+HTTP 412
+PASS
+
+Test 26: n1 5.3 delete already closed auction
+what we check
+Closing auction-2 returns Conflict.
+what we sent
+DELETE http://localhost:18080/v1/auctions/auction-2
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-2\" is already closed","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 27: n1 5.5 delete open auction without match
+what we check
+An open auction can be closed without a version header.
+what we sent
+DELETE http://localhost:18080/v1/auctions/auction-3
+what was the reply
+HTTP 200
+{"auctionId":"auction-3","currentBid":2200,"highestBidder":"n1-bidder","item":"Starlink mini (closed on n1)","status":"CLOSED","version":3}
+what was the expected result
+HTTP 200
+PASS
+
+Test 28: n1 5.4 delete with correct If-Match
+what we check
+Current version allows closing the open auction.
+what we sent
+DELETE http://localhost:18080/v1/auctions/auction-1
+Header: If-Match: "3"
+what was the reply
+HTTP 200
+{"auctionId":"auction-1","currentBid":1400,"highestBidder":"Alice","item":"Mac Pro M5 Laptop (closed on n1)","status":"CLOSED","version":4}
+what was the expected result
+HTTP 200
+PASS
+
+Test 29: n2 1.1 invalid list request
+what we check
+Invalid status selector is rejected.
+what we sent
+GET http://localhost:18081/v1/auctions?status=INVALID
+what was the reply
+HTTP 400
+{"detail":"invalid auction status \"INVALID\"","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 30: n2 1.2 list OPEN auctions
+what we check
+List request with status=OPEN succeeds.
+what we sent
+GET http://localhost:18081/v1/auctions?status=OPEN
+what was the reply
+HTTP 200
+{"auctions":[{"auctionId":"auction-4","currentBid":1200,"highestBidder":"Steve Jobs","item":"Mac Pro M5 Laptop_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1},{"auctionId":"auction-6","currentBid":2100,"highestBidder":"Elon Musk","item":"Starlink mini_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1}]}
+what was the expected result
+HTTP 200
+PASS
+
+Test 31: n2 1.2 list CLOSED auctions
+what we check
+List request with status=CLOSED succeeds.
+what we sent
+GET http://localhost:18081/v1/auctions?status=CLOSED
+what was the reply
+HTTP 200
+{"auctions":[{"auctionId":"auction-1","currentBid":1400,"highestBidder":"Alice","item":"Mac Pro M5 Laptop (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":4},{"auctionId":"auction-2","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":1},{"auctionId":"auction-3","currentBid":2200,"highestBidder":"n1-bidder","item":"Starlink mini (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":3},{"auctionId":"auction-5","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":1}]}
+what was the expected result
+HTTP 200
+PASS
+
+Test 32: n2 1.3 list all auctions
+what we check
+List request without a selector succeeds.
+what we sent
+GET http://localhost:18081/v1/auctions
+what was the reply
+HTTP 200
+{"auctions":[{"auctionId":"auction-1","currentBid":1400,"highestBidder":"Alice","item":"Mac Pro M5 Laptop (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":4},{"auctionId":"auction-2","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":1},{"auctionId":"auction-3","currentBid":2200,"highestBidder":"n1-bidder","item":"Starlink mini (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":3},{"auctionId":"auction-4","currentBid":1200,"highestBidder":"Steve Jobs","item":"Mac Pro M5 Laptop_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1},{"auctionId":"auction-5","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"CLOSED","version":1},{"auctionId":"auction-6","currentBid":2100,"highestBidder":"Elon Musk","item":"Starlink mini_N2 (dummy from n1, CONSISTENCY_SEQUENTIAL read)","status":"OPEN","version":1}]}
+what was the expected result
+HTTP 200
+PASS
+
+Test 33: n2 2.1 get auction-4
+what we check
+Existing dummy auction auction-4 is returned.
+what we sent
+GET http://localhost:18081/v1/auctions/auction-4
+what was the reply
+HTTP 200
+{"auctionId":"auction-4","currentBid":1200,"highestBidder":"Steve Jobs","item":"Mac Pro M5 Laptop_N2 (dummy from n1)","status":"OPEN","version":1}
+what was the expected result
+HTTP 200
+PASS
+
+Test 34: n2 2.1 get auction-5
+what we check
+Existing dummy auction auction-5 is returned.
+what we sent
+GET http://localhost:18081/v1/auctions/auction-5
+what was the reply
+HTTP 200
+{"auctionId":"auction-5","currentBid":4000,"highestBidder":"Jensen Huang","item":"Blackwell AI Chip_N2 (dummy from n1)","status":"CLOSED","version":1}
+what was the expected result
+HTTP 200
+PASS
+
+Test 35: n2 2.1 get auction-6
+what we check
+Existing dummy auction auction-6 is returned.
+what we sent
+GET http://localhost:18081/v1/auctions/auction-6
+what was the reply
+HTTP 200
+{"auctionId":"auction-6","currentBid":2100,"highestBidder":"Elon Musk","item":"Starlink mini_N2 (dummy from n1)","status":"OPEN","version":1}
+what was the expected result
+HTTP 200
+PASS
+
+Test 36: n2 2.2 get missing auction
+what we check
+Unknown auction ID is reported as not found.
+what we sent
+GET http://localhost:18081/v1/auctions/does-not-exist
+what was the reply
+HTTP 404
+{"detail":"auction \"does-not-exist\" not found","status":404,"title":"Not Found"}
+what was the expected result
+HTTP 404
+PASS
+
+Test 37: n2 3.1 create new auction
+what we check
+Valid create request returns Created.
+what we sent
+POST http://localhost:18081/v1/auctions/demo-n2-25251
+Header: Content-Type: application/json
+Body: {"item":"Demo item","startingPrice":100}
+what was the reply
+HTTP 201
+{"auctionId":"demo-n2-25251","currentBid":100,"item":"Demo item (created on n1)","status":"OPEN","version":1}
+what was the expected result
+HTTP 201
+PASS
+
+Test 38: n2 3.2 duplicate auction-4
+what we check
+Creating an existing dummy ID returns Already Exists.
+what we sent
+POST http://localhost:18081/v1/auctions/auction-4
+Header: Content-Type: application/json
+Body: {"item":"Duplicate","startingPrice":100}
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-4\" already exists","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 39: n2 3.2 duplicate auction-5
+what we check
+Creating an existing dummy ID returns Already Exists.
+what we sent
+POST http://localhost:18081/v1/auctions/auction-5
+Header: Content-Type: application/json
+Body: {"item":"Duplicate","startingPrice":100}
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-5\" already exists","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 40: n2 3.2 duplicate auction-6
+what we check
+Creating an existing dummy ID returns Already Exists.
+what we sent
+POST http://localhost:18081/v1/auctions/auction-6
+Header: Content-Type: application/json
+Body: {"item":"Duplicate","startingPrice":100}
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-6\" already exists","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 41: n2 3.3 missing create fields
+what we check
+Missing item and startingPrice are invalid.
+what we sent
+POST http://localhost:18081/v1/auctions/demo-n2-25251-missing
+Header: Content-Type: application/json
+Body: {}
+what was the reply
+HTTP 400
+{"detail":"auction_id, item, and non-negative starting_price are required","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 42: n2 3.3 negative starting price
+what we check
+Negative startingPrice is invalid.
+what we sent
+POST http://localhost:18081/v1/auctions/demo-n2-25251-negative
+Header: Content-Type: application/json
+Body: {"item":"Bad","startingPrice":-1}
+what was the reply
+HTTP 400
+{"detail":"auction_id, item, and non-negative starting_price are required","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 43: n2 4.1 bid on auction-4
+what we check
+Bid uses the real auction status and current bid.
+what we sent
+PATCH http://localhost:18081/v1/auctions/auction-4
+Header: Content-Type: application/json
+Body: {"bidder":"n2-bidder","amount":1300}
+what was the reply
+HTTP 200
+{"auctionId":"auction-4","currentBid":1300,"highestBidder":"n2-bidder","item":"Mac Pro M5 Laptop_N2 (bid processed on n1)","status":"OPEN","version":2}
+what was the expected result
+HTTP 200
+PASS
+
+Test 44: n2 4.1 bid on auction-5
+what we check
+Bid uses the real auction status and current bid.
+what we sent
+PATCH http://localhost:18081/v1/auctions/auction-5
+Header: Content-Type: application/json
+Body: {"bidder":"n2-bidder","amount":999999}
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-5\" is already closed","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 45: n2 4.1 bid on auction-6
+what we check
+Bid uses the real auction status and current bid.
+what we sent
+PATCH http://localhost:18081/v1/auctions/auction-6
+Header: Content-Type: application/json
+Body: {"bidder":"n2-bidder","amount":2200}
+what was the reply
+HTTP 200
+{"auctionId":"auction-6","currentBid":2200,"highestBidder":"n2-bidder","item":"Starlink mini_N2 (bid processed on n1)","status":"OPEN","version":2}
+what was the expected result
+HTTP 200
+PASS
+
+Test 46: n2 4.2 bid on missing auction
+what we check
+Unknown auction ID returns Not Found.
+what we sent
+PATCH http://localhost:18081/v1/auctions/does-not-exist
+Header: Content-Type: application/json
+Body: {"bidder":"Alice","amount":100}
+what was the reply
+HTTP 404
+{"detail":"auction \"does-not-exist\" not found","status":404,"title":"Not Found"}
+what was the expected result
+HTTP 404
+PASS
+
+Test 47: n2 4.3 incorrect If-Match
+what we check
+Stale optimistic-concurrency version is rejected.
+what we sent
+PATCH http://localhost:18081/v1/auctions/auction-4
+Header: If-Match: "102"
+Body: {"bidder":"Alice","amount":1400}
+what was the reply
+HTTP 412
+{"detail":"auction \"auction-4\" is at version 2, not 102","status":412,"title":"Precondition Failed"}
+what was the expected result
+HTTP 412
+PASS
+
+Test 48: n2 4.4 correct If-Match
+what we check
+Current optimistic-concurrency version allows the bid.
+what we sent
+PATCH http://localhost:18081/v1/auctions/auction-4
+Header: If-Match: "2"
+Body: {"bidder":"Alice","amount":1400}
+what was the reply
+HTTP 200
+{"auctionId":"auction-4","currentBid":1400,"highestBidder":"Alice","item":"Mac Pro M5 Laptop_N2 (bid processed on n1)","status":"OPEN","version":3}
+what was the expected result
+HTTP 200
+PASS
+
+Test 49: n2 4.5 bid too low
+what we check
+Bid equal to the current bid is rejected.
+what we sent
+PATCH http://localhost:18081/v1/auctions/auction-4
+Body: {"bidder":"Bob","amount":1400}
+what was the reply
+HTTP 409
+{"detail":"bid amount 1400 is not high enough for auction \"auction-4\"","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 50: n2 4.6 negative bid
+what we check
+Negative bid amount is invalid.
+what we sent
+PATCH http://localhost:18081/v1/auctions/auction-4
+Header: Content-Type: application/json
+Body: {"bidder":"Bob","amount":-1}
+what was the reply
+HTTP 400
+{"detail":"bid amount must be positive","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 51: n2 4.7 missing bidder
+what we check
+Bidder is required.
+what we sent
+PATCH http://localhost:18081/v1/auctions/auction-4
+Header: Content-Type: application/json
+Body: {"amount":1500}
+what was the reply
+HTTP 400
+{"detail":"bidder is required","status":400,"title":"Bad Request"}
+what was the expected result
+HTTP 400
+PASS
+
+Test 52: n2 5.1 delete missing auction
+what we check
+Unknown auction ID returns Not Found.
+what we sent
+DELETE http://localhost:18081/v1/auctions/does-not-exist
+what was the reply
+HTTP 404
+{"detail":"auction \"does-not-exist\" not found","status":404,"title":"Not Found"}
+what was the expected result
+HTTP 404
+PASS
+
+Test 53: n2 5.2 delete with incorrect If-Match
+what we check
+Stale version cannot close the auction.
+what we sent
+DELETE http://localhost:18081/v1/auctions/auction-4
+Header: If-Match: "103"
+what was the reply
+HTTP 412
+{"detail":"auction \"auction-4\" is at version 3, not 103","status":412,"title":"Precondition Failed"}
+what was the expected result
+HTTP 412
+PASS
+
+Test 54: n2 5.3 delete already closed auction
+what we check
+Closing auction-5 returns Conflict.
+what we sent
+DELETE http://localhost:18081/v1/auctions/auction-5
+what was the reply
+HTTP 409
+{"detail":"auction \"auction-5\" is already closed","status":409,"title":"Conflict"}
+what was the expected result
+HTTP 409
+PASS
+
+Test 55: n2 5.5 delete open auction without match
+what we check
+An open auction can be closed without a version header.
+what we sent
+DELETE http://localhost:18081/v1/auctions/auction-6
+what was the reply
+HTTP 200
+{"auctionId":"auction-6","currentBid":2200,"highestBidder":"n2-bidder","item":"Starlink mini_N2 (closed on n1)","status":"CLOSED","version":3}
+what was the expected result
+HTTP 200
+PASS
+
+Test 56: n2 5.4 delete with correct If-Match
+what we check
+Current version allows closing the open auction.
+what we sent
+DELETE http://localhost:18081/v1/auctions/auction-4
+Header: If-Match: "3"
+what was the reply
+HTTP 200
+{"auctionId":"auction-4","currentBid":1400,"highestBidder":"Alice","item":"Mac Pro M5 Laptop_N2 (closed on n1)","status":"CLOSED","version":4}
+what was the expected result
+HTTP 200
+PASS
+

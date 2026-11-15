@@ -1,0 +1,103 @@
+// Internal gRPC service for Online Auction Service (compile with `make gen-proto`).
+//
+// 	service. Rules shown here:
+//   * every RPC has its OWN request and response message
+//   * streams carry a variable number of items (auctions)
+//   * errors are gRPC status codes, not fields in the messages
+//   * RPCs need not map 1:1 to REST operations (5 REST operations, 4 RPCs)
+
+syntax = "proto3";
+package auction.v1;
+option go_package = "github.com/your-team/auction/gen/auction/v1;auctionv1";
+
+service AuctionService {
+  // Read one auction by ID or stream all auctions (optionally filtered by status).
+  // Returns NOT_FOUND only when a single auction_id was requested and is missing.
+  rpc Read(ReadRequest) returns (stream ReadResponse);
+  
+  // Creates new auction in OPEN status with version 1 (linearizable).
+  // Returns ALREADY_EXISTS if auction_id already exists, INVALID_ARGUMENT on bad input.
+  rpc CreateAuction(CreateAuctionRequest) returns (CreateAuctionResponse);
+  
+  // Places a bid on an OPEN auction if amount > current_bid (linearizable, RMW).
+  // Returns NOT_FOUND if missing, FAILED_PRECONDITION if if_version differs, or ABORTED/FAILED_PRECONDITION if auction is CLOSED or bid is too low.
+  rpc PlaceBid(PlaceBidRequest) returns (PlaceBidResponse);
+  
+  // Closes an auction so no further bids are accepted (linearizable).
+  // Returns NOT_FOUND if missing, FAILED_PRECONDITION if if_version differs, or ABORTED if already CLOSED.
+  rpc CloseAuction(CloseAuctionRequest) returns (CloseAuctionResponse);
+  
+  // Not in Part I:
+  // rpc Watch(WatchRequest) returns (stream WatchResponse);
+}
+
+enum Consistency {
+  CONSISTENCY_UNSPECIFIED = 0;	// treated as SEQUENTIAL
+  CONSISTENCY_SEQUENTIAL = 1;
+  CONSISTENCY_LINEARIZABLE = 2;
+}
+
+enum AuctionStatus {
+  AUCTION_STATUS_UNSPECIFIED = 0;  
+  AUCTION_STATUS_OPEN = 1;
+  AUCTION_STATUS_CLOSED = 2;
+}
+
+message Auction {
+  string auction_id = 1;
+  string item = 2;
+  int64 current_bid = 3;
+  optional string highest_bidder = 4; //unset/null when no bids have been placed yet
+  AuctionStatus status = 5;
+  int64 version = 6; 			      // monotonically incremented on every write (ETag)
+}
+
+// ---- Read --------------------------------------------------------------
+message ReadRequest {
+  oneof select {
+    string auction_id = 1;             // read a single specific auction
+    AuctionStatus status_filter = 2;   // list auctions; UNSPECIFIED = return all
+  }
+  Consistency consistency = 3;
+}
+
+message ReadResponse {
+  Auction auction = 1;                 // one message per auction in the stream
+}
+
+// ---- CreateAuction ------------------------------------------------------------
+message CreateAuctionRequest {
+  string auction_id = 1;
+  string item =2;
+  int64 starting_price =3;
+}
+
+message CreateAuctionResponse {
+  Auction auction = 1;
+}
+
+// ---- PlaceBid ------------------------------------------------------------
+message PlaceBidRequest {
+  string auction_id = 1;
+  string bidder = 2;
+  int64 amount = 3;
+  optional int64 if_version = 4;      // optimistic concurrency check (If-Match)
+}
+message PlaceBidResponse {
+  Auction auction = 1;
+}
+
+// ---- CloseAuction ------------------------------------------------------------
+message CloseAuctionRequest {
+  string auction_id = 1;
+  optional int64 if_version = 2;      // optimistic concurrency check (If-Match)
+}
+message CloseAuctionResponse {
+  Auction auction = 1;
+}
+
+// ---- Watch (not in Part I) ---------------------------------------------
+// message WatchRequest  { string prefix = 1; optional int64 since = 2; }
+// message WatchResponse {
+//   int64 revision = 1; Entry entry = 2; bool deleted = 3;
+// }

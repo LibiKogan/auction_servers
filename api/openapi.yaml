@@ -1,0 +1,255 @@
+openapi: 3.0.3
+# ---------------------------------------------------------------------------
+# STEP 1 — Service semantics as an OpenAPI document.
+#
+# Edit this file in the Swagger Editor (/editor once the server runs, or
+# https://editor.swagger.io) and fix every warning. Then `make gen-rest`.
+#
+# This file describes the running EXAMPLE, a key-value store. Students do
+# not implement it: replace it with your own service, keeping the structure:
+#   * every operation has an operationId  -> becomes a Go method name
+#   * reusable pieces live in components (schemas, parameters, responses)
+#   * reads take a `consistency` query parameter
+#   * errors are application/problem+json (RFC 9457)
+# ---------------------------------------------------------------------------
+info:
+  title: Online Auction Service
+  version: 1.0.0
+  description: |
+    Client-facing RESTful API of the replicated online auction service.
+
+    * **GET** reads one or all auctions; accepts `?consistency=sequential|linearizable` (default: sequential).
+    * **POST** creates a new auction (linearizable). 
+    * **PATCH** places a bid with a read-modify-write operation (linearizable).
+    * **DELETE** closes an auction (linearizable).
+    
+    * Every auction has a `version` (returned as the `ETag` header on `GET`). 
+      Clients may send it back in the `If-Match` header when placing a bid (`PATCH`) to ensure no other bid modified the auction in the meantime (returns 412 if it happened).
+servers:
+  - url: /
+    description: The server that serves this page (use with /docs)
+  - url: http://localhost:8080
+    description: Node n1 (from Swagger Editor/UI containers; needs -cors-origin)
+  - url: http://localhost:8081
+    description: Node n2 (from Swagger Editor/UI containers; needs -cors-origin)
+tags:
+  - name: auctions
+    description: Operations on the auction collection.
+  - name: auction
+    description: Operations on one auction.
+
+paths:
+  /v1/auctions:
+    get:
+      tags: [auctions]
+      operationId: listAuctions
+      summary: return all the auctions in the system.
+      parameters:
+        - $ref: '#/components/parameters/Consistency'
+        - name: status
+          in: query
+          required: false
+          description: Optional filter by auction status (absent = all auctions)
+          schema: { $ref: '#/components/schemas/AuctionStatus' }
+      responses:
+        '200':
+          description: List all auctions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuctionsList' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /v1/auctions/{auctionId}:
+    parameters:
+      - $ref: '#/components/parameters/AuctionId'
+    post:
+      tags: [auction]
+      operationId: createAuction
+      summary: Create new auction
+      description: Creates new auction in OPEN status (linearizable).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAuction' }
+      responses:
+        '201':
+          description: The new auction was created
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Auction' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    get:
+      tags: [auction]
+      operationId: getAuction
+      summary: Read one auction
+      parameters:
+        - $ref: '#/components/parameters/Consistency'
+      responses:
+        '200':
+          description: The auction
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Auction' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [auction]
+      operationId: placeBid
+      summary: Place a bid on an auction (read-modify-write)
+      description: |
+        Place a bid if the auction is OPEN and `amount` is strictly greater than its `currentBid` (linearizable). Returns 412 if `If-Match` does not match the current `version`.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlaceBid' }
+      responses:
+        '200':
+          description: The auction after the bid
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Auction' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [auction]
+      operationId: closeAuction
+      summary: Close an auction
+      description: Marks the auction as CLOSED so no further bids are accepted (linearizable)
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The closed auction
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Auction' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+
+components:
+  parameters:
+    AuctionId:
+      name: auctionId
+      in: path
+      required: true
+      description: Unique identifier of the auction
+      schema:
+        type: string 
+        minLength: 1
+    Consistency:
+      name: consistency
+      in: query
+      required: false
+      description: Read consistency guarantee (default is sequential)
+      schema: { $ref: '#/components/schemas/Consistency' }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: Expected current version (ETag) of the auction for optimistic concurrency control
+      schema: { type: string }
+
+  headers:
+    ETag:
+      description: Current version of the auction resource
+      schema: { type: string }
+
+  responses:
+    Problem:
+      description: Error (RFC 9457 / RFC 7807 problem details)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  schemas:
+    Consistency:
+      type: string
+      enum: [sequential, linearizable]
+      default: sequential
+    
+    AuctionStatus:
+      type: string
+      enum: [OPEN, CLOSED]
+      description: Lifecycle state of an auction
+    
+    Auction:
+      type: object
+      required: [auctionId, item, currentBid, status, version]
+      properties:
+        auctionId:
+          type: string
+        item: 
+          type: string
+          description: Description of the item being auctioned
+        currentBid:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Current highest bid (or starting price if no bids yet)
+        highestBidder:
+          type: string
+          nullable: true
+          description: Identifier of the current highest bidder (null if not bids yet)
+        status:
+          $ref: '#/components/schemas/AuctionStatus'
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Monotonically increasing version number for concurrency control
+
+    AuctionsList:
+      type: object
+      required: [auctions]
+      properties:
+        auctions:
+          type: array
+          items: { $ref: '#/components/schemas/Auction' }
+
+    CreateAuction:
+      type: object
+      required: [item, startingPrice]
+      properties:
+        item:
+          type: string
+          minLength: 1
+        startingPrice:
+          type: integer
+          format: int64
+          minimum: 0
+
+    PlaceBid:
+      type: object
+      required: [bidder, amount]
+      properties:
+        bidder:
+          type: string
+          minLength: 1
+        amount:
+          type: integer
+          format: int64
+          minimum: 1
+
+    ProblemDetails:
+      type: object
+      required: [title, status]
+      properties:
+        type: { type: string, default: about:blank }
+        title: { type: string }
+        status: { type: integer, format: int32 }
+        detail: { type: string }
